@@ -1,2 +1,2 @@
-# 2026fall
+# 2026Fall
 2024130871's repo for ENGL437-00
