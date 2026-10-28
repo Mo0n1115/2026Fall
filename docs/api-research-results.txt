@@ -1,0 +1,260 @@
+틈 — 서울·수도권 교통 API 조사 결과
+확인일: 2026-10-29 / Asia/Seoul(KST, UTC+09:00)
+조사 환경: Windows 로컬 PowerShell HTTP 요청, 로컬 Codex 브라우저, 공식 사이트 웹 열람.
+범위: 문서·접속 조사만 수행. 계정 생성, 상품 신청, 결제, 서비스 변경, GitHub push 없음.
+
+검증 표기
+[공식 문서 확인] 공식 페이지에서 명세·정책을 읽음. 실제 서비스 응답을 보장하지 않음.
+[실제 호출 확인] 인증된 교통 데이터 요청의 결과를 확인함. 이번 조사에는 해당 항목 없음.
+[미확인] 명세 불충분, 권한 없음 또는 실측하지 않음. '지원 불가'와 구별함.
+문서 페이지 HTTP 200은 교통 API 호출 성공이 아니다. 문서에 있는 JSON은 모두 문서 예시다.
+아래 [S번호]는 9절의 공식 근거와 연결된다. 설계 권고는 조사자의 제안이다.
+
+1) 요약
+
+조건부 우선안: TMAP 대중교통 API(상세 경로·도보) + 지역별 버스 도착/혼잡도(서울·경기·인천) + 서울교통공사 과거 혼잡도 통계. 상세 지하철 안내가 중요하면 ODsay를 비교 평가하되 상업적 이용·재정렬·타사 데이터 결합·보관 권한부터 서면 확인한다. 최종 공급자 선정·비용 지출은 제안으로 남긴다.
+
+[공식 문서 확인] TMAP은 대중교통 구간과 도보 상세 경로를 제공한다[S1,S2]. ODsay에는 출입구·방향·빠른 환승 관련 필드와 별도 도보/멀티모달 API가 있다[S4]. 서울·경기·인천 버스의 혼잡도는 서로 다른 코드와 제공 범위를 사용한다[S9~S12].
+[공식 문서 확인] 중요한 변경: ODsay Basic은 2026-08-20부터 30건/일, 기간 제한 없음[S6,S7]. 과거 1,000건/일 자료를 현재 한도로 사용하면 안 된다.
+[공식 문서 확인] SK '실시간 열차/칸 혼잡도'와 '진입 역 기준 실시간 열차/칸 혼잡도' 상세 문서에는 2025년 11월 서비스 종료가 명시돼 있다[S15,S16]. 메뉴·소개·옛 뉴스가 남아 있어도 신규 서비스의 실시간 공급원으로 선정하지 않는다. 실제 종료 응답은 미실행.
+[공식 문서 확인] TMAP에 함께 안내된 혼잡도 /stat/ API는 통계성이다. 10분은 시간 구간 크기이며 실시간 갱신 주기로 해석하지 않는다[S13,S14].
+[미확인] 수도권 전역의 실시간 칸별 혼잡도, 모든 운영기관의 승강장 번호, 표지판·층·계단·엘리베이터를 연결하는 실내 보행 그래프, 실시간 대기를 포함하는 전역 최단 경로 보장은 확보하지 못했다.
+[제안] 첫 버전의 '가장 빠르게'는 '조회된 후보 중 예상 총시간이 가장 짧은 경로'로 설명한다. '편하게'는 사용자 추가시간(기본 15분) 이내 후보를 혼잡도→환승→도보 순으로 재정렬하되 자료 종류·범위·누락률을 함께 표시한다. 좌석 확보를 보장하지 않는다.
+
+2) URL별 로컬 접속 결과와 시각
+
+모든 시각은 2026-10-29 KST. 아래는 로그인 없는 공개 문서 요청이다.
+URL | 요청 시작/확인 시각 | 로컬 결과 | 해석
+https://lab.odsay.com/guide/releaseReference | 01:11:32~33 | HTTP 200, 제목 ODsay LAB | 본문 열람 성공
+https://transit.tmapmobility.com/ | 01:11:33 | HTTP 200, Guide / TMAP 대중교통 API | 본문 열람 성공
+https://api.bus.go.kr/contents/sub02/getArrInfo.html | 01:11:33~54 | 443 연결 시간 초과, HTTP 코드 없음 | 접근 거부·상품 폐지라고 판정하지 않음
+https://data.seoul.go.kr/ | 01:11:54 | HTTP 200, 서울 열린데이터광장 | 본문 열람 성공
+https://openapi.sk.com/ | 01:11:54 | HTTP 200, SK open API | 본문 열람 성공; 상세 본문 일부는 동적 로딩
+
+최초 01:11:21 샌드박스 요청은 5곳 모두 DNS '알려진 호스트 없음'. 승인된 샌드박스 밖 로컬 요청으로 위 결과를 얻었다. 클라우드 프록시 CONNECT 403과 다른 실행 경로이며, 어느 쪽도 공급자 기능 검증 결과로 대체하지 않았다.
+서울 버스 동일 경로의 HTTP 요청은 01:12:33에 404. HTTPS 시간 초과와 별개 기록이다. 최신 대체 공식 자료로 공공데이터포털의 '서울특별시_버스도착정보조회 서비스'[S9]를 확인했다. 원래 URL이 이전됐다는 증거는 없다.
+
+추가 로컬 확인:
+01:12:33: https://transit.tmapmobility.com/docs/routes → 200
+01:12:33: https://transit.tmapmobility.com/docs/puzzle/train → 200
+01:12:33: https://lab.odsay.com/guide/guide → 200
+01:12:33: https://lab.odsay.com/introduce/intro → 200, 설명 상당 부분이 이미지여서 세부 범위 판독 제한
+01:12:33: 추정한 /community/notice(ODsay), /notice(TMAP)는 404. 공식 메뉴에서 최종 /community/noticeListView, /notice/list를 확인했음. 추정 URL은 근거로 쓰지 않음.
+01:20:23~24: ODsay /doc/totalPolicy, TMAP /terms·/notice/list → 로컬 본문 열람 성공
+01:20:24: https://www.data.go.kr/data/15059206/openapi.do → 로컬 본문 열람 성공(웹 열람 도구는 timeout이었으나 로컬은 성공)
+SK 상세 문서 linkMenuSeq=415,312,574 및 상품 소개 svcSeq=54: 로컬 브라우저에서 본문 확인. 이 브라우저 확인의 정확한 초 단위 시각은 기록하지 못함; 조사일 KST만 확정. HTML 목차만 읽으면 종료 안내를 놓칠 수 있다.
+
+3) 공급자·상품 비교
+
+공급자/정확한 상품 | 역할 | 지원 범위 | 비용·제한 | 인증·신규 신청 | 근거 | 검증 수준
+TMAP MOBILITY / TMAP 대중교통 API | 상세 복합 경로·도보 | 공식 소개는 전국 버스·지하철·기차·고속/시외·항공·해운. 개별 운영기관·신설노선 지원은 미확인 | 무료 10건/일, 종량 0.88원/건, 한도 초과 차단. VAT·월/QPS·실패 과금은 미확인 | SK open API 계정→앱 생성→상품 사용 등록→appKey. 실제 승인·신청 미실행 | S1~S3 | 공식 문서 확인
+TMAP MOBILITY / 대중교통 요약정보 API | 결과 요약 | 상세 경로와 구분해야 함 | 무료 10건/일, 종량 0.55원/건 | 상세 상품과 권한 확인 필요 | S1 | 공식 문서 확인
+아로정보기술 / ODsay LAB 대중교통 API | 경로·역/정류장·환승·도보 보강 후보 | 수도권 도시코드와 도시내/도시간 기능 명세 존재. 전국 운영기관별 최신 완전성 미확인 | Basic 30/일(개인·학생·5인 이하 스타트업), Standard 100,000/일 가격문의, Premium 100,000 초과/일 가격문의, Flex 100,000/일 후불. QPS는 제한하되 수치 비공개 | 앱 등록, 플랫폼별 키; URI/IP 최대 5개. 실제 가입 미실행 | S4~S7 | 공식 문서 확인
+서울특별시 / 버스도착정보조회 서비스 | 도착예정·차량 혼잡·방향 | 서울 버스 상품. 서울 소재 모든 버스나 경기·인천 노선 전체로 확대 해석 금지 | 무료, 개발 1,000, 운영 증설 신청 가능. 표의 1,000 기간 단위·QPS는 신청화면 재확인 | 공공데이터포털 활용신청, 개발/운영 자동승인 표기 | S9 | 공식 문서 확인
+경기도 / 버스도착정보 조회(v2) | 도착·혼잡·빈자리 | 경기 BIS. 혼잡도·빈자리 제공 노선 유형은 각각 제한 | 무료, 개발 1,000, 운영 증설 신청 가능. QPS 미확인 | 공공데이터포털 serviceKey, 자동승인 표기 | S10,S11 | 공식 문서 확인
+인천광역시 / 버스위치정보 조회 | 차량별 위치·혼잡·빈자리 | 인천 상품; 서울·경기 차량은 혼잡/빈자리 사용안함 명시 | 무료, 개발 1,000, 운영 증설 신청 가능. QPS 미확인 | ServiceKey, 개발/운영 자동승인 표기 | S12 | 공식 문서 확인(로컬)
+서울특별시 TOPIS / 서울시 지하철 실시간 도착정보 | 역별 도착·방향 보강 | 메타데이터 공간범위 서울시. 서울 외 일부 구간 미제공 명시. 수도권 전체 보장 아님 | 기본 1,000건/일, 갤러리 심사 후 제한 해제 안내. 무료 이용 가이드 | 서울 열린데이터 인증키, 상품 권한 별도 | S18,S19 | 공식 문서 확인
+SK텔레콤 / 지하철 혼잡도(PUZZLE) 통계성 기능 | 열차·칸의 시간대 통계 | 소개는 1~9호선·신분당선·공항철도, 메타 문서는 1~9·신분당. 실제 type별 목록 확인 필요 | 요금표 Free 10건/월, Basic 33원/건·일 100건 표기, VAT 포함. 실시간 종료 상품에 적용 금지 | SK 계정·앱·해당 상품 구독·appKey | S13~S17 | 공식 문서 확인
+SK텔레콤 / 실시간 열차/칸 혼잡도 2종 | 과거 실시간 기능 | 과거 명세 2·3호선 본선 한정 | 2025-11 종료 명시. 신규 이용 가능 상품으로 제외 | 대체 공급·재개 여부 미확인 | S15,S16 | 공식 문서 확인, 실제 호출 미실행
+서울교통공사 / 지하철혼잡도정보 | 저비용 통계 대안 | 공사 1~8호선, 요일·역·상하선·30분 평균. 코레일·인천·전체 수도권으로 확대 금지 | 파일 통계. 라이선스·최신 파일별 기준분기 확인 필요 | 다운로드 조건 개별 확인 | S20 | 공식 문서 확인
+
+이용 조건·권리 판단(명시되지 않은 권리를 추정하지 않음)
+- [공식 문서 확인] ODsay 운영정책 8항은 기본 용도 외 분석·대용량 사용에 사전 동의를 요구한다. 이용약관 4.5.10은 무단 복제·저장·가공·배포·제3자 전송을 제한한다. 6.2(API 이용 대가), 6.6(비상업·광고 제한 및 유료 앱 예외)이 함께 있어 '틈' 수익모델·후보 재정렬·캐시 허용은 서면 확인이 필요하다. 운영정책 10항에 상표 표시 의무가 있다[S7].
+- [공식 문서 확인] TMAP /terms: 얻은 데이터는 저장 후 24시간 이상 사용할 수 없다[S3]. 24시간을 영구 DB 구축·재배포 허가로 해석하지 않는다. 혼잡도 별도 상품에 이 조건을 자동 적용하지 않는다.
+- [미확인] TMAP/SK의 광고·유료 웹앱, 타사 지도 및 타사 혼잡도 결합, 결과 재정렬, 출처 문구·로고, 재배포·파생 데이터 보관의 구체 권리. SK 회원약관 페이지는 동적 본문 확인을 완료하지 못했다.
+- [공식 문서 확인] 서울 버스와 서울 지하철 도착은 공공누리 1유형(출처표시; 상업 이용·변경 가능), 경기 상품은 이용허락범위 제한 없음[S9,S11,S18]. 인천 상세 페이지는 1유형이나 catalog JSON에는 제3자 권리 문구도 있어 적용범위 재확인이 필요하다[S12]. 캐시 권리를 다른 공급자에 전이하지 않는다.
+- [미확인] 공공 데이터별 재배포 시 원본·수정일·제3자 표시 세부 조건과 API 이용약관상 보관 제한. 계약 확인 전 실제 응답 원문을 장기 저장하지 않는 설계를 제안한다.
+
+3-A) 인증·호출 명세 요약(전부 문서 확인, 실호출 아님)
+
+TMAP 상세 경로[S2]
+POST https://apis.openapi.sk.com/transit/routes
+헤더 appKey(상품 이용 등록 필요), JSON body startX/startY/endX/endY 필수. WGS84 경도/위도 순서. count=1~10(기본10), lang, format. searchDttm=yyyyMMddHHmm은 지정 시각의 운행 여부(service)를 안내하는 타임머신 기능으로 설명됨. 도착 희망 시각 역산이나 실시간 운행 예측 보장은 미확인. 시각 문자열의 명시적 timezone·자정 이후 영업일 처리 문의 필요.
+응답 metaData.plan.itineraries[]: totalTime(초), transferCount, totalWalkDistance(m), legs[].sectionTime(초), distance(m), mode, route/routeId, service, passStopList, passShape.linestring, steps[].description/linestring. 후보 최대10이 전체 가능한 경로를 뜻하지 않음. 최단 보장·정렬식·대기 포함 정의는 미확인.
+
+ODsay[S4,S5]
+GET/POST https://api.odsay.com/v1/api/searchPubTransPathT
+apiKey, SX/SY/EX/EY. SearchPathType=0전체/1지하철/2버스, OPT=0추천/1타입별.
+pathType=1지하철/2버스/3혼합, info.totalTime/totalWalk, subPath, mapObj→loadLane 그래픽 데이터. 평균배차 필드는 실시간 대기와 구별. busTransitCount/subwayTransitCount는 이름만 보고 '승차 수-1'과 동일시하지 말고 실제 응답으로 의미 확인.
+별도 maasRP: WGS84, SearchTime(출발 yyyyMMddHHmm), SearchMethod 필수; totalTime은 rps.duration 합(분). 별도 searchWalkPathV2: opt(reco/short/wide), loc(경도,위도 좌표셋); 직선거리 30km 제한. 각 상품 권한·별도 요금·지역 지원 확인 필요. 일반 길찾기와 멀티모달 명세를 섞지 않는다.
+문서 오류 예: -8형식, -9누락, 6서비스지역외, -98출도착700m이내, -99결과없음. HTTP 상태와 API 오류 코드 별도 기록. 초당 제한 실제 응답 미확인.
+
+서울 버스[S9]
+문서 노출 operation: GET http://ws.bus.go.kr/api/rest/arrive/getArrInfoByRouteAll
+query serviceKey, busRouteId. XML 기본 문서. headerCd/headerMsg/itemCount로 업무 결과 확인. HTTPS 운영 호스트 지원, JSON 옵션, CORS·IP 제한은 이번 미검증. 보안 프록시에서 키를 보호하고 HTTPS 지원을 먼저 확인한다.
+
+경기 버스[S10]
+GET https://apis.data.go.kr/6410000/busarrivalservice/v2/getBusArrivalItemv2
+query serviceKey, stationId, routeId, staOrder, format(json/xml). 같은 정류소를 양방향 경유할 수 있으므로 순번 필수 취급. 좌표 입력 없는 ID API; 정류소 좌표는 별도 정류소 조회 명세 필요. resultCode=0정상/1시스템/2필수누락/4결과없음은 문서 정의.
+
+인천 버스[S12]
+GET https://apis.data.go.kr/6280000/busLocationService/getBusRouteLocation
+query ServiceKey(문서 대문자 S), routeId, pageNo, numOfRows. XML. 결과 resultCode/resultMsg/totalCount 확인. 표의 gateway 오류 22일한도/23초당한도/30미등록키/31만료 등은 문서 예시이며 관측 결과 아님.
+
+SK 통계성[S13,S14,S17]
+GET https://apis.openapi.sk.com/transit/puzzle/subway/congestion/stat/train
+GET https://apis.openapi.sk.com/transit/puzzle/subway/congestion/stat/car
+appKey 헤더, routeNm/stationNm 필수; dow(MON~SUN), hh(05~23) 선택. 생략하면 현재 요일/시간 통계를 조회함. JSON status.code=00성공; 204No Content,400파라미터,404NOT_FOUND_DATA가 문서에 있음.
+별도 PUZZLE metadata: GET https://apis.openapi.sk.com/puzzle/subway/meta/stations, type=congestionTrain/congestionCar/congestionRltm/exit, offset/limit(최대1000). /transit/...와 /puzzle/... 상품별 호스트 경로·권한 혼동 금지.
+
+브라우저/CORS 및 서버 중계
+[공식 문서 확인] ODsay 가이드에 JavaScript 예시와 URI/서버 플랫폼이 있고, 공공 API 일부는 CORS 때문에 서버 호출이 필요하다고 안내한다[S5]. 이것이 모든 endpoint·임의 Origin의 CORS 성공 증거는 아니다.
+[미확인] 이번 조사에서 인증키 없이 CORS preflight·Access-Control-Allow-Origin·실제 도메인/IP 제한은 검사하지 않았다.
+[제안] HTML/CSS/JS→자체 HTTPS 서버→공급자. 비밀키는 서버 secret에만 두며 URL·헤더 로그에서 제거. 공급자별 일/월 예산·요청 병합·재시도 상한을 둔다. HTTP 429 외 HTTP200 업무오류도 처리하며 실패를 데이터 없음으로 바꾸지 않는다.
+
+4) 상세 안내 요구사항 대조
+
+요구 항목 | 공급자·필드 | 범위 | 근거·검증 | 미확인/주의
+노선 번호·호선 | ODsay lane.busNo/name/subwayCode; TMAP legs.route/type/routeId | 반환 구간 | S4,S2 공식 문서 확인 | 실제 명칭·신설노선 최신성 미확인
+승하차 역/정류장·통과역 | ODsay startID/endID·passStopList; TMAP start/end·passStopList.stations.stationID | 후보별 | S4,S2 공식 문서 확인 | 공급자 ID를 공공 ID와 동일시 금지
+공개 정류장 번호 | 서울 arsId, ODsay 세부 정류장 localStationID 등은 지역 명세와 대조 필요 | 서울/지역별 | S9 공식 문서 확인; ODsay 연결은 미확인 | ARS번호와 내부 정류장ID 구별
+운행 방향·행선지 | ODsay way/wayCode; 서울 dir; 경기 routeDestId/Name; 인천 DIRCD | 자료별 | S4,S9,S10,S12 공식 문서 확인 | 방향코드 체계 서로 다름; 종점과 바로 다음역을 구별
+급행·일반 | SK 통계 directAT(0일반/1급행); 경로 노선코드 | 해당 통계·경로 | S13,S14 공식 문서 확인 | 개별 경로 급행 차량 매칭 미확인
+출입구 번호·좌표 | ODsay startExitNo/X/Y, endExitNo/X/Y; 역 상세 exitInfo.gate.gateNo/gateLink | 선택 필드 | S4 공식 문서 확인 | 빈값·태그 없음 가능, 전역 커버리지 미확인
+빠른 환승 3-2 | ODsay subPath.door; subwayTransitInfo의 FastTrain/FastFastDoor 및 타고온/환승 노선·방면 | 환승 조합별 | S4 공식 문서 확인 | 3-2는 예시이며 특정 역 실측값 아님. 문번호와 출구번호 다름
+승강장 번호 | 조사한 경로 명세에서 명시적 플랫폼 번호 확보 못함 | 미확인 | 미확인 | way·offDoor(내리는 좌/우문)로 대체하지 않음
+도보 단계·지도 선 | TMAP steps.description/streetName/distance/linestring, passShape; ODsay 별도 도보·그래픽 API | 지상 이동 중심 후보 | S2,S4 공식 문서 확인 | 실내 연속 경로 보장 아님
+환승 통로·표지판·층·계단 | 완전한 연결 그래프 미확보 | 수도권 전체 미확인 | 미확인 | 환승역 이름·빠른 문 위치만으로 실내 길안내 생성 금지
+엘리베이터·무장애 동선 | ODsay handicapCount는 존재 여부 수준 | 역 시설 | S4 공식 문서 확인 | 위치·가동상태·단차 없는 연결을 의미하지 않음; 운영기관 별도 자료 필요
+
+5) 혼잡도 대조 및 ID 연결
+
+교통수단·지역 | 제공 단위 | 종류 | 코드·갱신 | ID 연결·범위 | 근거
+서울 버스 | 도착 예정 차량/노선 | 실시간 운행정보에 부착된 현재값; 미래 탑승시점 예측 아님 | 확인된 상세표 brdrde_Num1/2는 brerde_Div1/2=4일 때 0없음/3여유/4보통/5혼잡, Div=2는 인원 또는 특정 광역버스 잔여좌석. 확인 표는 뒷차 필드로 명시하므로 본차 혼잡 필드·업무 의미는 첨부 가이드 재확인 필요. 고정 갱신초·센서 관측시각 미확인 | busRouteId+정류소/순번+차량. 본차/뒷차 필드 혼용 금지 | S9 공식 문서 확인
+경기 버스 | 첫째·둘째 도착예정 차량 | 실시간 수집 혼잡/빈자리; ETA는 예측 | crowded1/2=1여유/2보통/3혼잡/4매우혼잡, 혼잡 제공유형13/15/23. remainSeatCnt=-1없음,0이상좌석수; 제공유형11/12/14/16/17/21/22. queryTime은 요청시간, 관측시간 아님 | routeId+stationId+staOrder, vehId1/2; routeDest로 방향 확인. flag STOP운행종료/WAIT회차지대기 | S10 공식 문서 확인
+인천 버스 | 운행 차량 | 실시간 운행정보 | CONGESTION=1여유/2보통/3혼잡/255사용안함. REMAIND_SEAT=255사용안함. 갱신초·관측지연 미확인 | ROUTEID+BUSID+DIRCD+LATEST_STOP_ID/STOPSEQ. 서울·경기 차량은 사용안함 | S12 공식 문서 확인(로컬)
+수도권 지하철 / SK 통계성 | 진입역·열차운행조합·칸 | 과거 통계 | congestionTrain/Car(%), 칸160명=100%. 요일·10분 구간,05:30~23:50. statStartDate/EndDate는 통계기간; 10분은 갱신주기 아님 | stationCode+호선+시작/종착/이전역+updnLine+directAT. 본선/지선/순환 suffix 보존 | S13,S14,S17 공식 문서 확인
+수도권 지하철 / SK 실시간 2종 | 과거 열차/칸 | 2025-11 종료 명시 | 과거 congestionType 또는 type=1실시간/2통계대체. 운영갱신 현재 미확인 | 과거 2·3호선 본선; trainY/역코드 | S15,S16 공식 문서 확인; 지원 불가(종료 문서 기준)
+서울교통공사 1~8 | 역·상하선·요일·30분 평균 | 과거 통계 | 정원 대비 승차인원%, 좌석수와 승차인원 일치시34%. 2024년부터 분기별 제공 설명 | 공사 역번호+호선+상하선+요일+30분구간; 모든 수도권 운영기관 자료 아님 | S20 공식 문서 확인
+지하철 미래 탑승시간의 동적 혼잡 예측 | 미확보 | 미확인 | 통계 시간대 조회를 실시간 미래예측으로 표시하지 않음 | 별도 계약/모델 검증 필요 | 미확인
+
+ID 연결 설계(제안; 실제 조인 미검증)
+ODsay v1.8의 busLocalBlID/busProviderCode/busCityCode와 지역 공식 노선 ID를 우선 대조한다. 공급자·지역 namespace를 보존한다. 정류소는 이름 단독 매칭을 피하고 공개번호·좌표·정류소 순번·방향·노선 경유순서를 함께 확인한다. TMAP routeId/stationID는 지역 공식 ID라는 보장이 확인되지 않았으므로 교차표가 필요하다.
+지하철은 공식 역코드표와 호선별 역 entity를 분리하고 환승역 복합체로 묶는다. SK의 211-R,211-0 같은 문자열을 정수 변환하지 않는다. 이름의 '역' 접미사·부역명·순환선을 명시적으로 정규화하고 방향은 이전/다음역으로 검증한다. 인천1·2호선, 수인분당선, 경강선 등은 SK 소개의 1~9호선과 같지 않다.
+누락·지연·종료 처리(제안)
+데이터 없음/지원범위외/공급자 오류/운행종료/오래됨을 별도 상태로 유지한다. 서울 0, 경기 -1, 인천255, SK 비운행시간 0을 '한산함'으로 변환하지 않는다. SK 통계 0은 운행하지 않는 시작·종착 조합일 수 있다[S13,S14]. 미래 환승 버스에 현재 첫째 차량의 혼잡을 그대로 대입하지 않는다. 재조회 가능 시 승차 직전에 갱신한다. 최대 허용 나이는 공급자 관측시각·SLA 확인 후 정하며 이번 조사에서 임의 갱신초를 확정하지 않는다.
+
+6) 실제 호출 기록 / 미실행 이유
+
+키·권한: 채팅에 안전하게 제공된 키 없음. 작업폴더 초기 목록은 .git뿐이었다. 사용자 비밀 저장소·브라우저 로그인·다른 프로젝트를 뒤져 키를 수집하지 않았다. 상품 권한·무료 잔량을 확인할 수 없어 인증된 교통 API는 0회 호출했다. 공식 페이지 sample 키도 사용자 기존 키가 아니므로 이번 테스트에 사용하지 않았다.
+
+공개 장소 테스트 | 상태 | 좌표·공급자 ID | HTTP/API코드·후보·소요시간·방향·혼잡 기준시각·상세필드
+서울역→잠실역(지하철 중심) | 미실행 | 실제 입력 좌표/ID 미조회·미확정 | 전부 N/A
+신촌역 주변→홍대입구역 주변(버스 후보) | 미실행 | 신촌은 2호선/경의중앙선 혼동 방지, 지점·출구 먼저 고정 필요 | 전부 N/A
+서울역→판교역 주변 목적지(혼합 후보) | 미실행 | 판교역 중심인지 주변 건물인지 장소 고정 필요 | 전부 N/A
+인천시청역→수원역(인천·경기) | 미실행 | 호선별 역·출입구 좌표/ID 미확정 | 전부 N/A
+
+없는 후보를 만들거나 대체 노선을 추정하지 않았다. 버스/혼합 후보 없음 여부도 호출 전이므로 판정하지 않았다. 정확한 좌표는 공인 POI/역/정류장 조회로 확보한 뒤 요청 입력과 출처·시각을 함께 고정해야 한다. 이번 파일의 문서 예시 좌표·역코드·차량코드는 테스트 입력이나 실제 응답이 아니다.
+
+권한 확보 후 최소 검증안(이번에는 실행하지 않음)
+1. 무료 잔량·상품·도메인/IP·허용 보관조건 확인. 공개 장소 좌표(WGS84, 경도·위도), 공급자 역/정류장 ID 기록.
+2. 주간 KST에 네 경로를 각1회. 실제 count/pathType 및 구간별 승하차·방향 기록. 후보 없을 때만 대표 입력1개 추가; 결과를 꾸며내지 않음.
+3. 한 후보의 필요한 버스 도착·혼잡 및 지하철 통계만 조회. providerId↔officialId·방향·시간대가 일치하는지 기록.
+4. 원문 대신 필요한 필드만 최소 발췌. API키·쿼리 인증값·헤더·사용자위치는 기록 제외. HTTP/API 코드 및 실패/빈결과/지원범위외를 구분.
+5. TMAP 자료는 24시간 사용 제한을 적용하고 영구 보관 필요시 사전 확인. ODsay 응답 저장·가공은 명시 동의 전 미수행. 공개 문서 근거 파일과 API 데이터 보관을 구별.
+
+7) 첫 버전 권고 및 웹 위치 기능
+
+추천 조합과 대안(제안)
+A. TMAP 상세 경로 + 서울/경기/인천 공공 버스 + 서울교통공사 통계: 지상 도보 단계와 혼합 경로를 먼저 검증하기 좋다. TMAP의 공개 ID 연결과 실내 안내 공백이 주요 위험.
+B. ODsay 경로/역/환승 + 공공 실시간 + 허용된 도보 공급자: 빠른 환승·출입구 필드가 장점. Basic30건/일과 이용약관상 재가공·수익모델 제약을 해결하기 전 운영 선택 금지.
+C. SK 통계성 칸 혼잡도: 계약상 지도결합·보관조건과 type별 역 목록 확인 후 선택 보강. 종료된 실시간 API는 제외.
+공통: 전국 확대는 공급자 마케팅 범위와 별개로 운영기관·지역·수단별 실제 지원표를 만들고 미지원은 명시한다. 인천시청→수원은 경로 가능성과 혼잡 제공 가능성을 따로 검증한다.
+
+추천 로직(제안)
+- 동일 출발시각·동일 도보 기준으로 후보 집합 P를 정규화한다. Tfast=min(T(p)); 편한 후보는 T(p)≤Tfast+사용자허용분×60. 기본900초.
+- 시간에는 접근/하차 도보, 이동, 환승 도보, 탑승 대기가 모두 필요하다. 공급자 총시간의 대기 포함 여부 확인 전 무조건 ETA를 더하면 이중계산 위험. 첫 버전에서 검증되지 않은 '실시간 총시간'을 표시하지 않는다.
+- 혼잡 비교는 정의가 다른 원시 코드의 단순 평균을 피한다. 자료유형별로 분리하고 구간별 탑승 예상시각에 맞춘다. 유효 자료가 충분한 후보끼리 혼잡 노출(예: 탑승시간 가중치), 환승 수, 도보거리의 사전식 정렬을 제안한다. 지표의 가중치·단계 환산은 제품 정책이며 공급자 정의가 아니다.
+- 정보 없음은0점/최저혼잡으로 두지 않는다. 자료가 다른 후보는 불확실성을 명시하고 환승·도보 비교를 제공한다. 모든 후보가 불완전하면 '혼잡 비교 불가'.
+- 최단 후보 대비 추가시간 기준은 반환 후보 집합 안에서만 성립한다. 전체 교통망 전역 최적·대안 경로 완전성·좌석확보는 보장하지 않는다. 후보 밖의 편한 경로를 못 찾을 수 있다.
+- 실시간 지연·막차·우회는 재탐색 사유. 경로가 없으면 오류/운행없음/미지원 구별 후 시간 변경·장소 수정 제공. 직선 연결을 실제 보행선으로 표시하지 않는다.
+
+웹 위치(공식 문서 확인, 실기기 테스트 미실행)[S21~S27]
+- watchPosition은 HTTPS secure context, 사용자 명시 권한 및 Permissions-Policy 허용 필요. 위치 변경에 success 콜백, 오류 콜백을 등록하고 watch ID 반환. clearWatch(id)로 감시 해제.
+- coords.accuracy는 위·경도 오차를 m 단위로 표현하며 95% 신뢰수준. timestamp는 위치 취득시점의 Unix epoch 기반 밀리초. 화면 수신시각과 구별하여 오래된 값 판별.
+- enableHighAccuracy는 정확도 요청이지 GPS 강제나 칸 판별 보장 아님. maximumAge는 허용 캐시 나이(ms), timeout은 취득 제한(ms); 권한/가시성 대기시간과 구별한다. 위치 거부·취득불가·timeout을 분리한다.
+- W3C 2026-03-26 Candidate Recommendation 6.5는 fully active·visible 문서에 위치 업데이트 전달을 한정한다. 모바일 잠금·백그라운드에서 계속 갱신된다고 약속할 수 없다. 문서 규칙과 OS/브라우저별 실제 동작은 별도이며 이번 실기기 결과 없음.
+- 알림은 위치 권한과 별도. MDN은 사용자 동작에서 권한 요청 및 모바일에서 service worker의 showNotification 사용을 안내한다. Apple 문서는 iOS16.4+ 홈화면 웹앱 Web Push 지원을 설명한다. Web Push가 지하 GPS 추적·정확한 하차 알림을 보장하지 않는다.
+- 전경 복귀시 마지막 위치 나이 확인→새 위치 재취득→현재 단계 재확인. GPS만으로 지하철 현재 역·열차·칸을 확정하지 않는다. 사용자가 '탑승했어요/이 역이에요/이전·다음 단계'로 수정하고 자동 추정이 이를 즉시 덮어쓰지 않도록 한다.
+- 미실행 기기 검증: Android Chrome/iOS Safari 및 홈화면 웹앱에서 권한 거절·회수, 잠금1/5/15분, 지하구간, 배터리절약, 통신끊김, 복귀, 수동단계 보정, 알림 지연. 시뮬레이션 결과를 실기기 결과로 쓰지 않는다.
+
+8) 후속 작업: 계정·상품·키·도메인 및 문의 질문
+
+실행 담당자가 준비할 것(아직 신청하지 않음)
+TMAP: SK open API 로그인, 앱 생성, 'TMAP 대중교통 상세' Free 사용 등록, 무료 잔량·후불전환 없음 확인, server secret과 허용 IP/Origin 등록 조건 확인.
+ODsay: Basic 자격 확인, 서버 플랫폼 키, 최대5개 URI/IP 등록, searchPubTransPathT·maasRP·도보·역환승 상품별 권한 확인. 상용 계약 문의는 사용자 판단 후 진행.
+서울/경기/인천: 공공데이터포털 각각의 상품 활용신청/승인·인증키 확인. 하나의 키가 모든 상품 권한을 자동 부여하지 않음. 서울 지하철은 서울 열린데이터 인증키 별도.
+접속 도메인: lab.odsay.com/api.odsay.com; transit.tmapmobility.com/openapi.sk.com/apis.openapi.sk.com; api.bus.go.kr/ws.bus.go.kr; data.seoul.go.kr; data.go.kr/apis.data.go.kr; gbis.go.kr. HTTP만 명시된 operation은 HTTPS 제공 여부와 중계 호스트를 공급자에 확인.
+키 값은 이 파일·채팅·Git·스크린샷에 추가하지 않는다. 비밀 관리 기능을 통해 제공하고 확인 로그는 키 존재/상품권한/잔량만 남긴다.
+
+공급자에게 확인할 질문(발송 미실행)
+공통: 상업/광고/구독 서비스 허용? 타사 지도·공공 실시간·혼잡 통계 결합 및 후보 재정렬 허용? 화면 출처·로고 규격? 캐시 TTL, 로그·익명 통계·ID교차표 보관·재배포 허용? 일/월/QPS·실패 과금·요금 VAT·과금 캡·한도초과 응답·SLA?
+TMAP: totalTime과 sectionTime에 대기/환승/도보가 각각 어떻게 포함되는가? 실시간 지연 반영인가 시간표/평균인가? 반환 후보 생성/정렬 및 최단 보장 범위? searchDttm의 시간대·출발/도착시각 semantics? 지역 공공 정류장·노선 ID 매핑 제공? 승강장·방향·출입구·빠른문·실내보행 별도 상품? 저장24시간 만료 후 파생 점수/ID보관 가능?
+ODsay: 표준약관6.2·6.6과 유료 앱 예외가 '틈'에 어떻게 적용되는가? 혼잡 기반 재정렬이 허용되는 가공인가? 응답 발췌 보관도 사전동의 필요한가? 실시간 도착 조합 허용과 각 map 라이선스? Basic/Standard 언어 안내의 문서간 차이? 새 maasRP·searchWalkPathV2 별도 과금·전국지원·총시간 대기 포함? subwayTransitInfo 문서 HTTP의 HTTPS 대체 지원?
+SK: 2025-11 종료의 대체 실시간 API/계약상품이 있는가? 공항철도 포함 소개와 metadata 범위 차이? 통계 갱신 주기·원천기간·명절 처리·칸 배열 방향 및 편성 변화? 통계성 API를 TMAP 상품으로 쓰는 경우 별도 PUZZLE 요금표와 어떤 관계인가?
+공공 버스: 각 노선·차량의 혼잡 센서 제공률, 관측 timestamp·갱신·최대 지연, 빈자리 sentinel·만차 정의, 데이터 누락·기기장애 코드? 인천 제3자 권리 표기 적용범위?
+운영기관: 출구·승강장·빠른문·엘리베이터 고장·층별 실내 그래프의 공개 데이터 및 상업 이용 가능성? 서울교통공사 외 코레일·인천교통공사·신분당선·공항철도의 혼잡 자료·역ID·갱신 범위?
+
+9) 공식 근거 목록
+전부 확인일 2026-10-29 KST. URL을 열지 못하는 후속 에이전트를 위해 핵심은 위 본문에 기재했다. '문서 확인'은 해당 API 활성·실제 응답 확인이 아니다.
+
+S1 https://transit.tmapmobility.com/
+제목 TMAP 대중교통 API / 상품 정보·요금제. 전국 교통수단, 시간표 기반, 도보 조합, 무료10/일·종량 단가. 공식 문서 확인.
+S2 https://transit.tmapmobility.com/docs/routes
+제목 대중교통 API / API URL·Request·Response·Sample. POST, WGS84, count,searchDttm, 시간/거리·구간·도보선 필드. 공식 문서 확인. 로컬 텍스트 official-1.txt.
+S3 https://transit.tmapmobility.com/terms
+제목 이용약관 / 준수사항·제약사항. 저장 후24시간 이상 사용 불가, 다수 프로젝트 동일서비스 제한. 공식 문서 확인.
+S4 https://lab.odsay.com/guide/releaseReference
+제목 API Reference Release-ver.1 / 대중교통 길찾기v1.8, 지하철역 세부/환승 정보, 그래픽, 멀티모달, 도보. 필드·endpoint·오류 표. 공식 문서 확인. 로컬 official-3.txt.
+S5 https://lab.odsay.com/guide/guide
+제목 Guide / 앱 등록·플랫폼 설정·실시간 도착 연동. URI/IP 최대5개, 공공데이터와 ID 연동·CORS 주의. 공식 문서 확인. 로컬 official-4.txt.
+S6 https://lab.odsay.com/community/noticeView?seq=370
+제목 [Service Notice] Basic 서비스 유형 일 제한 호출수 변경 안내(2026-08-10). 2026-08-20부터30/일. 본문 요일 표기에 불일치가 있으나 날짜·한도와 현재 정책을 대조함. 공식 문서 확인.
+S7 https://lab.odsay.com/doc/totalPolicy
+제목 정책 및 약관 / 운영정책2·8·10항, 이용약관4.5.10·6.2·6.6. 한도·자격·저장가공·수익모델·상표 조건. 공식 문서 확인.
+S8 https://transit.tmapmobility.com/guide/procedure
+제목 TMAP 대중교통 API 이용절차. 앱·상품 이용 절차. https://transit.tmapmobility.com/notice/list 공지 목록은 동적 로딩으로 종료공지 전수 검토 미완료. ODsay 공지는 /community/noticeListView. 공식 문서 확인/공지 전수 미확인.
+S9 https://www.data.go.kr/data/15000314/openapi.do
+제목 서울특별시_버스도착정보조회 서비스 / 이용조건·getArrInfoByRouteAll 출력표. 무료·1유형·자동승인·개발1000, 혼잡 구분·코드·방향·ARS·업무결과. 첨부 가이드 제목은 서울특별시_버스도착정보조회_서비스_활용가이드_20250814.docx(첨부 자체 미열람). 공식 문서 확인.
+S10 https://gbis.go.kr/gbis2014/publicService.action?cmd=mBusArrival
+제목 버스 도착정보 항목조회 / 요청·출력·에러코드. v2, staOrder, 혼잡/좌석 노선유형·sentinel·운행상태. 공식 문서 확인.
+S11 https://www.data.go.kr/data/15080346/openapi.do
+제목 경기도_버스도착정보 조회 / 이용조건·라이선스. 무료·자동승인·개발1000·이용허락범위 제한없음. 공식 문서 확인.
+S12 https://www.data.go.kr/data/15059206/openapi.do
+제목 인천광역시_버스위치정보 조회 / 버스위치정보 목록조회·이용조건. endpoint·ServiceKey·CONGESTION/REMAIND_SEAT255·서울경기 사용안함·방향. 로컬 HTTP 본문 확인. catalog https://www.data.go.kr/catalog/15059206/openapi.json 의 제3자 권리 표기와 대조 필요.
+S13 https://transit.tmapmobility.com/docs/puzzle/train
+제목 진입 역 기준 열차 혼잡도 / Request·Response. 요일·시간대 통계,0해석·운행조합·통계기간. 공식 문서 확인. 로컬 official-2.txt.
+S14 https://transit.tmapmobility.com/docs/puzzle/car
+제목 진입 역 기준 칸 혼잡도 / Response·역목록. 칸160명100%, 10분 구간, 방향·급행·기간. 공식 문서 확인.
+S15 https://openapi.sk.com/products/detail?linkMenuSeq=312
+제목 실시간 열차/칸 혼잡도 / 맨 위 종료 안내. 로컬 브라우저에서 '2025년 11월 부로 실시간 열차/칸 혼잡도 API의 서비스를 종료합니다.' 확인. 구경로 /puzzle/subway/congestion/rltm/trains/{subwayLine}/{trainY}. 공식 문서 확인; 실제 호출 없음.
+S16 https://openapi.sk.com/products/detail?linkMenuSeq=574
+제목 진입 역 기준 실시간 열차/칸 혼잡도 / 맨 위 종료 안내. 같은2025-11종료 문구 로컬 브라우저 확인. 구경로 /puzzle/subway/congestion/rltm/stations/{stationCode}. 공식 문서 확인; 실제 호출 없음.
+S17 https://openapi.sk.com/products/detail?linkMenuSeq=415
+제목 데이터 제공 가능 지하철역 / type·offset·limit·역코드. 로컬 브라우저 확인. 상품소개 https://openapi.sk.com/products/detail?svcSeq=54&menuSeq=249 는 최근3개월통계·1~9/신분당/공항철도 표기. 요금 https://openapi.sk.com/products/calc?menuSeq=142&svcSeq=54 는 Free/Basic 표. 범위·요금 적용관계 추가 확인. 공식 문서 확인.
+S18 https://data.seoul.go.kr/dataList/OA-12764/A/1/datasetView.do
+제목 서울시 지하철 실시간 도착정보 / 데이터정보·기타유의사항. 서울외 일부역 미제공, 생성시각 recptnDt 지연, sample은 서울역 한정,1유형, 최신 역정보 파일20260902 목록. 공식 문서 확인; endpoint별 전체 출력필드·응답은 미검증.
+S19 https://data.seoul.go.kr/together/guide/useGuide.do
+제목 Open API 소개 / 인증키·실시간지하철1000/일. FAQ https://data.seoul.go.kr/together/notice/faqList.do 는 실제 서비스 URL 갤러리 심사·한도해제 설명. 공지 https://data.seoul.go.kr/together/notice/boardList.do 에 2026-07-03 지하철 API 정상화 목록 확인. 공식 문서 확인.
+S20 https://data.seoul.go.kr/bsp/wgs/dataView/data300View/20108.do
+제목 서울교통공사_지하철혼잡도정보 / 데이터 설명.1~8호선·30분평균·34%좌석기준·요일/상하선·분기제공. 공식 문서 확인. 실제 최신분기 파일 미다운로드.
+S21 https://developer.mozilla.org/en-US/docs/Web/API/Geolocation/watchPosition
+제목 Geolocation: watchPosition() / 보안·권한·옵션·반환ID. 공식 문서 확인.
+S22 https://developer.mozilla.org/en-US/docs/Web/API/GeolocationCoordinates/accuracy
+제목 accuracy property / m·95% 신뢰수준. 공식 문서 확인.
+S23 https://developer.mozilla.org/en-US/docs/Web/API/GeolocationPosition/timestamp
+제목 timestamp property / 위치 취득시각. 공식 문서 확인.
+S24 https://developer.mozilla.org/en-US/docs/Web/API/Geolocation/clearWatch
+제목 clearWatch() / ID로감시해제. 공식 문서 확인.
+S25 https://www.w3.org/TR/geolocation/
+제목 Geolocation / 2026-03-26 Candidate Recommendation,6.5/6.6/7절. visible·fully active 제약·옵션. 브라우저 구현 실측과 구별. 공식 문서 확인.
+S26 https://developer.mozilla.org/en-US/docs/Web/API/Notifications_API/Using_the_Notifications_API
+제목 Using the Notifications API / 권한·모바일 service worker 알림. 공식 문서 확인.
+S27 https://developer.apple.com/documentation/usernotifications/sending-web-push-notifications-in-web-apps-and-browsers
+제목 Sending web push notifications in web apps and browsers / iOS16.4+홈화면,권한·푸시서버. 공식 문서 확인.
+S28 https://tago.go.kr/v5/use/openapi.jsp
+제목 TAGO Open API / 전국 확대용 노선·정류장·도착 공급 후보. 도시별 실제 제공목록·혼잡·길찾기 권한은 이번 미확인.
+
+근거 보관 안내
+research-evidence/official-1~5.txt는 공개 공식 문서에서 HTML을 제거한 참고 텍스트이며 API 실제 응답이 아니다. 파일5(ODsay 소개)는 이미지 위주라 텍스트만으로 지원범위를 확정할 수 없다. 약관·가격은 확인일 이후 변경 가능하므로 실제 신청 전 최신 화면과 계약서를 다시 대조한다. API키·개인위치·인증된 응답 원문은 저장하지 않았다.
+research-evidence/sk-realtime-closure-notes.txt는 로컬 브라우저에서 확인한 종료 안내와 역사적 명세의 요약이며 실제 응답이 아니다.
