@@ -25,7 +25,7 @@ jobs:
         with:
           node-version: '22'
       - name: Test route recommendations
-        run: node --test tests/routes.test.mjs
+        run: node --test tests/*.test.mjs
       - name: Configure Pages
         uses: actions/configure-pages@v5
       - name: Upload static website
