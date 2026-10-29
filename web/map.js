@@ -7,6 +7,36 @@
  let loaded=false;
  tiles.on('tileload',()=>{loaded=true;el('map-status').hidden=true;});
  tiles.on('tileerror',()=>{if(!loaded){el('map-status').hidden=false;el('map-status').textContent='지도 타일을 불러오지 못했습니다. 인터넷 연결 또는 네트워크 정책을 확인해주세요.';}});
+ const routeLayer=L.layerGroup().addTo(map);
+ let choices=[],selectedKind=null;
+ function paintRoutes(){
+  routeLayer.clearLayers();
+  const sorted=[...choices].sort((a,b)=>(a.kind===selectedKind)-(b.kind===selectedKind));
+  for(const choice of sorted){
+   const selected=choice.kind===selectedKind;
+   const color=selected?(choice.kind==='comfort'?'#236647':'#c35e23'):'#7a858d';
+   for(const leg of choice.route.legs){
+    if(!leg.points?.length)continue;
+    const line=L.polyline(leg.points,{color,weight:selected?7:4,opacity:selected?1:.55,dashArray:leg.mode==='WALK'?'4 9':null}).addTo(routeLayer);
+    line.bindTooltip(`${choice.label} · ${leg.mode==='WALK'?'도보':leg.route} · 합성 개략선`);
+    line.on('click',()=>window.dispatchEvent(new CustomEvent('teum-route-pick',{detail:choice.kind})));
+   }
+  }
+  const choice=choices.find(c=>c.kind===selectedKind);
+  if(!choice)return;
+  const points=choice.route.legs.flatMap(leg=>leg.points||[]);
+  if(!points.length){el('route-legend').textContent='이 경로의 지도 좌표가 없습니다.';return;}
+  const labels=[[points[0],'출발'],[points.at(-1),'도착']];
+  choice.route.legs.forEach((leg,i)=>{if(i>0&&leg.mode==='WALK'&&i<choice.route.legs.length-1&&leg.points?.length)labels.push([leg.points[0],'환승']);});
+  for(const [point,label] of labels){L.marker(point,{icon:L.divIcon({className:'route-marker',html:`<span>${label}</span>`,iconSize:[44,28],iconAnchor:[22,14]})}).addTo(routeLayer).bindTooltip('합성 예시 지점 · 실제 승하차 위치 아님');}
+  el('route-legend').textContent=`${choice.label} · 예시 개략선 (실제 도로·선로 아님) · 점선: 도보 · 회색: 다른 후보`;
+ }
+ window.teumSetRoutes=(next,kind)=>{choices=next;selectedKind=kind;paintRoutes();};
+ window.teumSelectRoute=kind=>{
+  selectedKind=kind;paintRoutes();setFollow(false);
+  const points=choices.find(c=>c.kind===kind)?.route.legs.flatMap(l=>l.points||[])||[];
+  if(points.length){const mobile=window.innerWidth<=720;map.fitBounds(L.latLngBounds(points),{paddingTopLeft:mobile?[30,95]:[430,100],paddingBottomRight:mobile?[30,window.innerHeight*.43+35]:[60,100],animate:false});}
+ };
  let watch=null,marker=null,circle=null,last=null,following=true,active=false;
  const followButton=el('follow');
  function setFollow(value){following=value;followButton.setAttribute('aria-pressed',String(value));followButton.textContent=value?'◎ 위치 따라가는 중':'◎ 내 위치로';}
